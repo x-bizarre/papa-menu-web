@@ -145,7 +145,7 @@
     <h3>Мои ориентиры на день</h3>
     <table class="goals-table">
       <tbody>
-        <tr><td>Калории</td><td><b>≈1750 ккал</b></td></tr>
+        <tr><td>Калории</td><td><b id="goal-kcal">≈1750 ккал</b></td></tr>
         <tr><td>Белок</td><td><b>110–130 г</b></td></tr>
         <tr><td>Шаги</td><td><b>6–8 тыс.</b></td></tr>
         <tr><td>Соль</td><td><b>до 5 г</b></td></tr>
@@ -185,7 +185,14 @@
   </footer>
 </div>
 
+<script src="goals.js"></script>
 <script src="recipes.js"></script>
+<script>
+  // Норма калорий приезжает из goals.js — помощник понижает её вслед за BMR
+  if (typeof GOALS !== 'undefined' && GOALS.kcal) {
+    document.getElementById('goal-kcal').textContent = '≈' + GOALS.kcal + ' ккал';
+  }
+</script>
 <script>
   // Категории строим из самих рецептов: бот может завести новую, и она появится сама
   var ORDER = ["Все","Корейская еда","Супы","Рыба","Мясо","Гарниры","Салаты","Перекусы","Прочее"];

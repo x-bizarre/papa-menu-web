@@ -159,6 +159,14 @@
   #pin-input:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
   #pin-screen .btn{max-width:280px; margin:14px auto 0}
 
+  /* Баннер-уведомление (например, о понижении нормы вслед за BMR) */
+  .notice{
+    background:var(--card); border:1px solid var(--accent); border-radius:16px;
+    box-shadow:var(--shadow); padding:16px 18px; margin-top:14px;
+    font-size:17px; line-height:1.6; white-space:pre-line;
+  }
+  .notice .btn{margin-top:12px}
+
   footer{text-align:center; color:var(--muted); font-size:13px; padding:26px 0 10px; line-height:1.7}
   [hidden]{display:none!important}
 </style>
@@ -193,6 +201,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         Дневник питания
       </a>
+    </div>
+
+    <div class="notice" id="notice" hidden>
+      <div id="notice-text"></div>
+      <button class="btn secondary" id="notice-ok">Понятно 👍</button>
     </div>
 
     <!-- ГЛАВНОЕ МЕНЮ -->
@@ -308,6 +321,7 @@ function tryPin(){
       $('pin-screen').hidden = true;
       $('app').hidden = false;
       goHome();
+      loadNotice();
     } else if(resp.status === 429){
       $('pin-error').textContent = 'Слишком много попыток. Подожди час.';
       $('pin-error').hidden = false;
@@ -680,9 +694,24 @@ function saveSleep(){
   }).catch(showErr);
 }
 
+// ─── уведомления от помощника (понижение нормы и т.п.) ───
+function loadNotice(){
+  api('/api/notice', {method:'GET'}).then(function(data){
+    if(data.text){
+      $('notice-text').textContent = data.text;
+      $('notice').hidden = false;
+    }
+  }).catch(function(){ /* нет связи — покажем в следующий раз */ });
+}
+$('notice-ok').onclick = function(){
+  $('notice').hidden = true;
+  api('/api/notice/dismiss', {method:'POST'}).catch(function(){});
+};
+
 // ─── старт ───
 if(getCode()){
   $('app').hidden = false;
+  loadNotice();
 } else {
   showPin();
 }
