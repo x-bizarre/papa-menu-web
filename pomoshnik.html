@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f6b4f">
+<title>Помощник — рецепты, калории и сон</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232f6b4f'/%3E%3Cpath d='M30 68V36l20 20 20-20v32' fill='none' stroke='%23f7f3e8' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232f6b4f'/%3E%3Cpath d='M30 68V36l20 20 20-20v32' fill='none' stroke='%23f7f3e8' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Та же зелёная гамма, что и в каталоге рецептов. Шрифты крупные — папа читает с телефона. */
+  :root{
+    --bg:#f4f1e6; --card:#fffdf6; --ink:#2b2f26; --muted:#6f7565;
+    --accent:#2f6b4f; --accent-soft:#c8ded0; --line:#e2ded0;
+    --good:#8a6a3b; --pill:#e6ecdf; --danger:#a54242;
+    --shadow:0 6px 22px rgba(60,80,60,.09);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#191d18; --card:#232922; --ink:#eaf0e3; --muted:#9aa48f;
+      --accent:#6bb08a; --accent-soft:#2c4436; --line:#333a30;
+      --good:#c9a86a; --pill:#2c332a; --danger:#d98080;
+      --shadow:0 6px 22px rgba(0,0,0,.3);
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:'Karla',system-ui,sans-serif; font-size:18px; line-height:1.6;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:640px; margin:0 auto; padding:0 16px 40px}
+
+  header{padding:26px 0 10px; text-align:center}
+  header .kicker{font-size:14px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:700}
+  header h1{font-family:'Playfair Display',serif; font-weight:600; font-size:32px; margin:6px 0 4px; line-height:1.15}
+  header p{color:var(--muted); margin:0; font-size:16px}
+
+  .toplinks{display:flex; gap:10px; margin:14px 0 6px}
+  .toplinks a{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:13px 10px; min-height:50px; border-radius:14px;
+    background:var(--card); border:1px solid var(--line); box-shadow:var(--shadow);
+    color:var(--ink); font-weight:700; font-size:16px; text-decoration:none;
+  }
+  .toplinks svg{width:19px;height:19px;color:var(--accent)}
+
+  .tiles{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px}
+  .tile{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    box-shadow:var(--shadow); padding:18px 14px; min-height:104px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    font-family:inherit; font-size:17px; font-weight:700; color:var(--ink);
+    cursor:pointer; text-align:center; line-height:1.3;
+  }
+  .tile .em{font-size:30px; line-height:1}
+  .tile:active{background:var(--pill)}
+
+  .panel{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    box-shadow:var(--shadow); padding:18px; margin-top:16px;
+  }
+  .panel h2{font-family:'Playfair Display',serif; font-size:23px; font-weight:600; margin:0 0 8px}
+  .hint{color:var(--muted); font-size:16px; margin:0 0 14px}
+  .hint em{font-style:normal; color:var(--ink)}
+
+  textarea{
+    width:100%; min-height:120px; padding:14px; border:1px solid var(--line);
+    border-radius:14px; background:var(--bg); color:var(--ink);
+    font-family:inherit; font-size:18px; line-height:1.5; outline:none; resize:vertical;
+  }
+  textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:9px; width:100%;
+    padding:15px; min-height:56px; margin-top:10px;
+    border:none; border-radius:14px; cursor:pointer;
+    font-family:inherit; font-size:18px; font-weight:700;
+    background:var(--accent); color:#fff;
+  }
+  .btn.secondary{background:var(--pill); color:var(--ink)}
+  .btn.ghost{background:transparent; border:1px solid var(--line); color:var(--muted)}
+  .btn.danger-ghost{background:transparent; border:1px solid var(--line); color:var(--danger)}
+  .btn.rec{background:var(--good)}
+  .btn.rec.recording{background:var(--danger); animation:pulse 1.2s infinite}
+  .btn:disabled{opacity:.5; cursor:default}
+  .btn svg{width:21px;height:21px;flex:none}
+  @keyframes pulse{50%{opacity:.75}}
+
+  .row2{display:flex; gap:10px}
+  .row2 .btn{margin-top:10px}
+
+  .status{
+    display:flex; align-items:center; gap:10px; margin-top:14px;
+    color:var(--muted); font-size:17px;
+  }
+  .spinner{
+    width:22px; height:22px; flex:none; border-radius:50%;
+    border:3px solid var(--line); border-top-color:var(--accent);
+    animation:spin .9s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .error{
+    margin-top:14px; padding:13px 15px; border-radius:12px; font-size:16px;
+    background:rgba(165,66,66,.1); color:var(--danger); line-height:1.5;
+  }
+  .heard{
+    margin-top:14px; padding:13px 15px; border-radius:12px; font-size:16px;
+    background:var(--pill); color:var(--muted); line-height:1.5;
+  }
+  .heard b{color:var(--ink)}
+
+  .result-card{margin-top:16px; border-top:1px solid var(--line); padding-top:14px}
+  .result-card .rname{font-family:'Playfair Display',serif; font-size:22px; font-weight:600; line-height:1.3}
+  .result-card .rcat{color:var(--muted); font-size:15px; margin-bottom:10px}
+  .numline{
+    display:inline-block; margin:3px 6px 3px 0; font-size:15px; font-weight:700;
+    color:var(--accent); background:var(--pill); padding:5px 12px; border-radius:999px;
+  }
+  .result-card h4{margin:16px 0 6px; font-size:14px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); font-weight:700}
+  .result-card ul, .result-card ol{margin:0; padding-left:22px; font-size:17px}
+  .result-card li{padding:4px 0}
+  .tipbox{background:var(--pill); border-radius:12px; padding:12px 14px; margin-top:12px; font-size:16px; line-height:1.55}
+  .tipbox.lite{background:rgba(138,106,59,.13)}
+  .tipbox b{color:var(--accent)}
+  .tipbox.lite b{color:var(--good)}
+  .confirm-note{margin-top:14px; color:var(--muted); font-size:16px; text-align:center}
+
+  .picklist{display:flex; flex-direction:column; gap:8px; margin-top:6px}
+  .picklist button{
+    text-align:left; padding:13px 15px; min-height:52px; border-radius:12px;
+    border:1px solid var(--line); background:var(--bg); color:var(--ink);
+    font-family:inherit; font-size:17px; font-weight:600; cursor:pointer; line-height:1.4;
+  }
+  .picklist button:active{background:var(--pill)}
+
+  .done{
+    margin-top:16px; padding:16px; border-radius:14px; font-size:17px; line-height:1.6;
+    background:rgba(47,107,79,.1);
+  }
+  .done b{color:var(--accent)}
+
+  .back{margin-top:18px}
+
+  /* Экран входа по коду */
+  #pin-screen{padding-top:12vh; text-align:center}
+  #pin-screen .lock{font-size:44px}
+  #pin-screen p{color:var(--muted); font-size:17px}
+  #pin-input{
+    width:220px; padding:14px; text-align:center; letter-spacing:.35em;
+    font-size:26px; font-weight:700; font-family:inherit;
+    border:1px solid var(--line); border-radius:14px; background:var(--card); color:var(--ink); outline:none;
+  }
+  #pin-input:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+  #pin-screen .btn{max-width:280px; margin:14px auto 0}
+
+  footer{text-align:center; color:var(--muted); font-size:13px; padding:26px 0 10px; line-height:1.7}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ЭКРАН ВХОДА -->
+  <div id="pin-screen" hidden>
+    <div class="lock">🔒</div>
+    <h1 style="font-family:'Playfair Display',serif;font-weight:600">Помощник</h1>
+    <p>Введи код доступа — один раз,<br>дальше буду узнавать тебя сам.</p>
+    <input id="pin-input" type="tel" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="······">
+    <button class="btn" id="pin-btn">Войти</button>
+    <div class="error" id="pin-error" hidden></div>
+  </div>
+
+  <!-- ОСНОВНОЙ ЭКРАН -->
+  <div id="app" hidden>
+    <header>
+      <div class="kicker">Меню для папы</div>
+      <h1>Помощник</h1>
+      <p>Расскажи — посчитаю и запишу</p>
+    </header>
+
+    <div class="toplinks">
+      <a href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Мои рецепты
+      </a>
+      <a href="https://docs.google.com/spreadsheets/d/1gp2_kpgF7C8MYhnWc87Sm1WD8OHabiYilxFUd2Ojdac/edit" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Дневник питания
+      </a>
+    </div>
+
+    <!-- ГЛАВНОЕ МЕНЮ -->
+    <div id="home">
+      <div class="tiles">
+        <button class="tile" data-mode="recipe"><span class="em">🍲</span>Записать рецепт</button>
+        <button class="tile" data-mode="edit"><span class="em">✏️</span>Поправить рецепт</button>
+        <button class="tile" data-mode="lookup"><span class="em">🔢</span>Сколько калорий</button>
+        <button class="tile" data-mode="sleep"><span class="em">😴</span>Записать сон</button>
+      </div>
+    </div>
+
+    <!-- РАБОЧАЯ ПАНЕЛЬ -->
+    <div id="work" class="panel" hidden>
+      <h2 id="work-title"></h2>
+      <p class="hint" id="work-hint"></p>
+
+      <div id="pick-block" hidden>
+        <div class="picklist" id="pick-list"></div>
+      </div>
+
+      <div id="input-block" hidden>
+        <textarea id="input-text" placeholder="Напиши сюда…"></textarea>
+        <button class="btn rec" id="btn-rec">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+          <span id="rec-label">Сказать голосом</span>
+        </button>
+        <button class="btn" id="btn-send">Отправить</button>
+      </div>
+
+      <div class="heard" id="heard" hidden></div>
+      <div class="status" id="status" hidden><div class="spinner"></div><span id="status-text"></span></div>
+      <div class="error" id="error" hidden></div>
+
+      <div id="result" hidden>
+        <div class="result-card" id="result-card"></div>
+        <p class="confirm-note" id="confirm-note">Проверь и нажми кнопку.</p>
+        <div id="confirm-buttons">
+          <button class="btn" id="btn-save">✅ Всё верно — записать</button>
+          <div class="row2">
+            <button class="btn secondary" id="btn-retry">🔄 Переделать</button>
+            <button class="btn danger-ghost" id="btn-cancel">❌ Отменить</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="done" id="done" hidden></div>
+
+      <button class="btn ghost back" id="btn-back">← В меню помощника</button>
+    </div>
+
+    <footer>
+      Всё, что подтверждено, попадает в приложение с рецептами<br>и в дневник питания автоматически.
+    </footer>
+  </div>
+</div>
+
+<script>
+var API = 'https://papa-menu-bot.fly.dev';
+var SHEET_URL = 'https://docs.google.com/spreadsheets/d/1gp2_kpgF7C8MYhnWc87Sm1WD8OHabiYilxFUd2Ojdac/edit';
+
+// ─── состояние ───
+var st = {
+  mode: null,        // recipe | edit | lookup | sleep
+  card: null,        // карточка на подтверждении
+  editName: null,    // какой рецепт правим
+  sleep: null,       // разобранный сон
+  lastText: ''       // последний отправленный текст (для «Переделать»)
+};
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>]/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+function ru(v){
+  if(v===null || v===undefined || v==='') return '—';
+  return String(v).replace('.', ',');
+}
+
+// ─── код доступа ───
+function getCode(){ try{ return localStorage.getItem('papa_code') || ''; }catch(e){ return ''; } }
+function setCode(c){ try{ localStorage.setItem('papa_code', c); }catch(e){} }
+
+function api(path, opts, isForm){
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  opts.headers['X-Code'] = getCode();
+  if(!isForm && opts.body){ opts.headers['Content-Type'] = 'application/json'; }
+  return fetch(API + path, opts).then(function(resp){
+    if(resp.status === 401){ showPin('Код не подошёл. Введи ещё раз.'); throw new Error('нужен код'); }
+    return resp.json().then(function(data){
+      if(!resp.ok){ throw new Error(data.detail || 'что-то пошло не так'); }
+      return data;
+    });
+  });
+}
+
+function showPin(msg){
+  $('app').hidden = true;
+  $('pin-screen').hidden = false;
+  if(msg){ $('pin-error').textContent = msg; $('pin-error').hidden = false; }
+}
+
+$('pin-btn').onclick = tryPin;
+$('pin-input').addEventListener('keydown', function(e){ if(e.key==='Enter') tryPin(); });
+function tryPin(){
+  var code = $('pin-input').value.trim();
+  if(!code) return;
+  $('pin-error').hidden = true;
+  $('pin-btn').disabled = true;
+  fetch(API + '/api/auth', {method:'POST', headers:{'X-Code': code}}).then(function(resp){
+    $('pin-btn').disabled = false;
+    if(resp.ok){
+      setCode(code);
+      $('pin-screen').hidden = true;
+      $('app').hidden = false;
+      goHome();
+    } else if(resp.status === 429){
+      $('pin-error').textContent = 'Слишком много попыток. Подожди час.';
+      $('pin-error').hidden = false;
+    } else {
+      $('pin-error').textContent = 'Код не подошёл. Проверь и попробуй ещё раз.';
+      $('pin-error').hidden = false;
+    }
+  }).catch(function(){
+    $('pin-btn').disabled = false;
+    $('pin-error').textContent = 'Нет связи с помощником. Проверь интернет и попробуй ещё раз.';
+    $('pin-error').hidden = false;
+  });
+}
+
+// ─── навигация ───
+var MODES = {
+  recipe: {
+    title: '🍲 Записать рецепт',
+    hint: 'Расскажи про блюдо — голосом или текстом. Что клал, сколько примерно, как готовил. Граммы называть не обязательно — прикину сам.<br><br><em>Например: «Сварил суп из говядины, кабачка и картошки, добавил ложку тоя и кимчи, вышла большая кастрюля на четверых».</em>'
+  },
+  edit: {
+    title: '✏️ Поправить рецепт',
+    hint: 'Какой рецепт поправить?'
+  },
+  lookup: {
+    title: '🔢 Сколько калорий',
+    hint: 'Про какой продукт или блюдо рассказать?<br><br><em>Например: «яйцо», «гречка отварная», «сколько в скумбрии».</em>'
+  },
+  sleep: {
+    title: '😴 Записать сон',
+    hint: 'Расскажи, как спал — голосом или текстом. Говори как есть, я разложу по часам.<br><br><em>Например: «Лёг в десять, в полпервого проснулся, часа два лежал, потом спал до семи. Днём подремал полчаса».</em>'
+  }
+};
+
+[].forEach.call(document.querySelectorAll('.tile'), function(t){
+  t.onclick = function(){ openMode(t.getAttribute('data-mode')); };
+});
+$('btn-back').onclick = goHome;
+
+function goHome(){
+  stopRec(true);
+  st.mode = null; st.card = null; st.editName = null; st.sleep = null; st.lastText = '';
+  $('home').hidden = false;
+  $('work').hidden = true;
+  resetWork();
+}
+
+function resetWork(){
+  $('pick-block').hidden = true;
+  $('input-block').hidden = true;
+  $('heard').hidden = true;
+  $('status').hidden = true;
+  $('error').hidden = true;
+  $('result').hidden = true;
+  $('done').hidden = true;
+  $('input-text').value = '';
+}
+
+function openMode(mode){
+  st.mode = mode; st.card = null; st.editName = null; st.sleep = null;
+  resetWork();
+  $('home').hidden = true;
+  $('work').hidden = false;
+  $('work-title').textContent = MODES[mode].title;
+  $('work-hint').innerHTML = MODES[mode].hint;
+
+  if(mode === 'edit'){ loadEditList(); }
+  else { $('input-block').hidden = false; }
+  window.scrollTo(0, 0);
+}
+
+function loadEditList(){
+  busy('Смотрю список рецептов…');
+  api('/api/recipes', {method:'GET'}).then(function(data){
+    idle();
+    var names = data.names || [];
+    if(!names.length){ showError('Пока ни одного рецепта нет.'); return; }
+    var list = $('pick-list');
+    list.innerHTML = '';
+    names.forEach(function(n){
+      var b = document.createElement('button');
+      b.textContent = n;
+      b.onclick = function(){
+        st.editName = n;
+        $('pick-block').hidden = true;
+        $('work-hint').innerHTML = '<em>' + esc(n) + '</em><br><br>Что поправить? Скажи голосом или напиши.<br><em>Например: «убери картошку», «мяса клал 300 грамм», «получилось не 4 порции, а 5».</em>';
+        $('input-block').hidden = false;
+      };
+      list.appendChild(b);
+    });
+    $('pick-block').hidden = false;
+  }).catch(showErr);
+}
+
+// ─── статусы ───
+function busy(text){
+  $('error').hidden = true;
+  $('status-text').textContent = text;
+  $('status').hidden = false;
+  $('btn-send').disabled = true;
+  $('btn-rec').disabled = true;
+}
+function idle(){
+  $('status').hidden = true;
+  $('btn-send').disabled = false;
+  $('btn-rec').disabled = false;
+}
+function showError(msg){
+  idle();
+  $('error').textContent = msg;
+  $('error').hidden = false;
+}
+function showErr(e){
+  if(e && e.message === 'нужен код') return;
+  showError('Не получилось: ' + (e && e.message ? e.message : e) + '. Попробуй ещё раз.');
+}
+
+// ─── голос ───
+var recorder = null, chunks = [];
+$('btn-rec').onclick = function(){
+  if(recorder && recorder.state === 'recording'){ stopRec(); return; }
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    showError('На этом телефоне запись голоса в браузере не работает — напиши текстом.');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    chunks = [];
+    var mime = '';
+    ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].some(function(m){
+      if(MediaRecorder.isTypeSupported(m)){ mime = m; return true; }
+      return false;
+    });
+    recorder = new MediaRecorder(stream, mime ? {mimeType: mime} : undefined);
+    recorder.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop = function(){
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      var blob = new Blob(chunks, {type: recorder.mimeType || 'audio/webm'});
+      if(blob.size < 1000){ showError('Запись вышла пустой. Попробуй ещё раз.'); recFace(false); return; }
+      sendAudio(blob);
+    };
+    recorder.start();
+    recFace(true);
+  }).catch(function(){
+    showError('Не получил доступ к микрофону. Разреши микрофон в настройках браузера или напиши текстом.');
+  });
+};
+
+function stopRec(silent){
+  if(recorder && recorder.state === 'recording'){
+    if(silent){ recorder.onstop = null; recorder.stream && recorder.stream.getTracks().forEach(function(t){t.stop();}); }
+    try{ recorder.stop(); }catch(e){}
+  }
+  recFace(false);
+}
+function recFace(on){
+  $('btn-rec').classList.toggle('recording', !!on);
+  $('rec-label').textContent = on ? '⏹ Готово — нажми, чтобы закончить' : 'Сказать голосом';
+}
+
+function sendAudio(blob){
+  recFace(false);
+  busy('🎧 Слушаю…');
+  var fd = new FormData();
+  fd.append('audio', blob, 'voice');
+  api('/api/transcribe', {method:'POST', body: fd}, true).then(function(data){
+    $('heard').innerHTML = '🎧 Записал: <b>' + esc(data.text) + '</b>';
+    $('heard').hidden = false;
+    $('input-text').value = data.text;
+    idle();
+    send(); // как в боте: услышал — сразу разбираю, папа подтвердит карточкой
+  }).catch(showErr);
+}
+
+// ─── отправка ───
+$('btn-send').onclick = send;
+function send(){
+  var text = $('input-text').value.trim();
+  if(!text){ showError('Сначала расскажи — голосом или текстом.'); return; }
+  st.lastText = text;
+  $('result').hidden = true;
+  $('done').hidden = true;
+
+  if(st.mode === 'recipe') return doParseRecipe(text);
+  if(st.mode === 'edit') return doEdit(text);
+  if(st.mode === 'lookup') return doLookup(text);
+  if(st.mode === 'sleep') return doSleep(text);
+}
+
+function doParseRecipe(text){
+  busy('🧮 Считаю калории…');
+  api('/api/recipe/parse', {method:'POST', body: JSON.stringify({text:text})}).then(function(card){
+    idle();
+    st.card = card;
+    showCard(recipeCardHTML(card));
+  }).catch(showErr);
+}
+
+function doEdit(text){
+  busy('🧮 Пересчитываю…');
+  api('/api/recipe/edit', {method:'POST', body: JSON.stringify({name: st.editName, instruction: text})}).then(function(card){
+    idle();
+    st.card = card;
+    showCard(recipeCardHTML(card));
+  }).catch(showErr);
+}
+
+function doLookup(text){
+  busy('🔢 Смотрю…');
+  api('/api/lookup', {method:'POST', body: JSON.stringify({text:text})}).then(function(info){
+    idle();
+    var h = '<div class="rname">' + esc(info.name || text) + '</div>';
+    h += '<div style="margin-top:8px"><span class="numline">На 100 г: ' + ru(info.kcal_per_100) + ' ккал</span>';
+    h += '<span class="numline">Белок: ' + ru(info.protein_per_100) + ' г</span></div>';
+    if(info.unit_weight) h += '<p style="margin:8px 0 0">' + esc(info.unit_weight) + '</p>';
+    if(info.answer) h += '<p style="margin:10px 0 0">' + esc(info.answer) + '</p>';
+    if(info.diary_hint) h += '<div class="tipbox" style="margin-top:12px">📊 ' + esc(info.diary_hint) + '</div>';
+
+    if(info.is_recipe){
+      st.card = null;
+      h += '<p style="margin:14px 0 0">Это уже полноценное блюдо. Записать его в приложение и в дневник?</p>';
+      $('result-card').innerHTML = h;
+      $('confirm-note').hidden = true;
+      $('confirm-buttons').hidden = false;
+      $('btn-save').hidden = false;
+      $('btn-save').textContent = '✅ Да, записать';
+      $('btn-retry').hidden = true;
+      $('btn-cancel').textContent = 'Не надо';
+      $('result').hidden = false;
+      $('btn-save').onclick = function(){
+        // как в боте: вопрос разбирается как рецепт и сохраняется
+        busy('🧮 Собираю карточку…');
+        api('/api/recipe/parse', {method:'POST', body: JSON.stringify({text: st.lastText})}).then(function(card){
+          st.card = card;
+          saveRecipe();
+        }).catch(showErr);
+      };
+      return;
+    }
+    // простая еда — только показываем цифры, кнопок записи нет (как в боте)
+    $('result-card').innerHTML = h;
+    $('confirm-note').hidden = true;
+    $('confirm-buttons').hidden = true;
+    $('result').hidden = false;
+  }).catch(showErr);
+}
+
+function doSleep(text){
+  busy('🧮 Раскладываю по часам…');
+  api('/api/sleep/parse', {method:'POST', body: JSON.stringify({text:text})}).then(function(card){
+    idle();
+    if(card.need_clarification){
+      showError('Уточни, пожалуйста: ' + card.need_clarification);
+      return;
+    }
+    st.sleep = card;
+    showCard(sleepCardHTML(card));
+  }).catch(showErr);
+}
+
+// ─── карточки ───
+function showCard(html){
+  $('result-card').innerHTML = html;
+  $('confirm-note').hidden = false;
+  $('confirm-buttons').hidden = false;
+  $('btn-save').hidden = false;
+  $('btn-retry').hidden = false;
+  $('btn-save').textContent = '✅ Всё верно — записать';
+  $('btn-cancel').textContent = '❌ Отменить';
+  $('btn-save').onclick = onSave;
+  $('result').hidden = false;
+  $('result').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function recipeCardHTML(c){
+  var h = '<div class="rname">' + esc(c.name || 'Без названия') + '</div>';
+  h += '<div class="rcat">' + esc(c.cat || '') + '</div>';
+  if(c.total_weight){
+    var head = 'Всего получилось: ' + c.total_weight + ' г';
+    if(c.portions && c.portions > 1) head += ' — это ' + c.portions + ' порции по ' + c.portion + ' г';
+    h += '<p style="margin:0 0 6px">' + esc(head) + '</p>';
+  }
+  h += '<div><span class="numline">100 г: ' + ru(c.kcal_per_100) + ' ккал · белок ' + ru(c.protein_per_100) + ' г</span>';
+  if(c.kcal_portion) h += '<span class="numline">Порция ' + (c.portion||'') + ' г: ' + ru(c.kcal_portion) + ' ккал · белок ' + ru(c.protein_portion) + ' г</span>';
+  h += '</div>';
+  h += '<h4>Продукты</h4><ul>' + (c.ingredients||[]).map(function(i){return '<li>'+esc(i)+'</li>';}).join('') + '</ul>';
+  h += '<h4>Как готовить</h4><ol>' + (c.steps||[]).map(function(s){return '<li>'+esc(s)+'</li>';}).join('') + '</ol>';
+  if(c.tip) h += '<div class="tipbox">💡 ' + esc(c.tip) + '</div>';
+  if(c.lighter) h += '<div class="tipbox lite">🌿 ' + esc(c.lighter) + '</div>';
+  if(c.changes && c.changes.length) h += '<h4>Что изменилось</h4><ul>' + c.changes.map(function(x){return '<li>'+esc(x)+'</li>';}).join('') + '</ul>';
+  return h;
+}
+
+function sleepCardHTML(c){
+  var night = (c.segments||[]).filter(function(s){return s.kind==='ночь';});
+  var day = (c.segments||[]).filter(function(s){return s.kind==='день';});
+  var h = '<div class="rname">Сон</div>';
+  if(night.length) h += '<h4>Ночью</h4><ul>' + night.map(function(s){return '<li>'+esc(s.start)+' — '+esc(s.end)+'</li>';}).join('') + '</ul>';
+  if(day.length) h += '<h4>Днём</h4><ul>' + day.map(function(s){return '<li>'+esc(s.start)+' — '+esc(s.end)+'</li>';}).join('') + '</ul>';
+  h += '<div style="margin-top:10px"><span class="numline">Всего сна: ' + ru(c.total_sleep) + ' ч</span>';
+  if(c.wakeups) h += '<span class="numline">Просыпался: ' + c.wakeups + ' раз</span>';
+  h += '</div>';
+  if(c.note) h += '<p style="margin:10px 0 0;color:var(--muted)">' + esc(c.note) + '</p>';
+  return h;
+}
+
+// ─── подтверждение ───
+$('btn-retry').onclick = function(){
+  $('result').hidden = true;
+  $('heard').hidden = true;
+  $('input-text').value = '';
+  $('input-text').focus();
+};
+$('btn-cancel').onclick = function(){
+  st.card = null; st.sleep = null;
+  $('result').hidden = true;
+  $('done').textContent = 'Отменил. Ничего не записал.';
+  $('done').hidden = false;
+};
+
+function onSave(){
+  if(st.mode === 'sleep') return saveSleep();
+  return saveRecipe();
+}
+
+function saveRecipe(){
+  busy('💾 Записываю…');
+  var body = {card: st.card};
+  if(st.mode === 'edit' && st.editName) body.old_name = st.editName;
+  api('/api/recipe/save', {method:'POST', body: JSON.stringify(body)}).then(function(data){
+    idle();
+    $('result').hidden = true;
+    var h = '✅ <b>Готово!</b><br>«' + esc(data.name) + '» ';
+    if(st.mode === 'edit'){
+      h += 'обновлён в приложении и в дневнике.';
+      if(data.fixed_diary_rows) h += '<br>В дневнике поправил записей: ' + data.fixed_diary_rows + '.';
+    } else {
+      h += 'добавлен:<br>• в приложение с рецептами<br>• в справочник дневника — теперь можно выбирать при записи еды';
+    }
+    h += '<br><br><a href="index.html" style="color:var(--accent);font-weight:700">📖 Открыть рецепты</a>';
+    h += '<br><span style="color:var(--muted);font-size:15px">Страница рецептов обновится через минуту-другую.</span>';
+    $('done').innerHTML = h;
+    $('done').hidden = false;
+    st.card = null; st.editName = null;
+  }).catch(showErr);
+}
+
+function saveSleep(){
+  busy('💾 Записываю…');
+  // Ночной сон относим к дате засыпания: запись утром — про вчерашнюю ночь.
+  // Считаем на телефоне папы — в его часовом поясе.
+  var now = new Date();
+  var d = new Date(now.getTime());
+  if(now.getHours() < 12) d.setDate(d.getDate() - 1);
+  var dateStr = ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth()+1)).slice(-2);
+
+  api('/api/sleep/save', {method:'POST', body: JSON.stringify({date: dateStr, segments: st.sleep.segments})}).then(function(data){
+    idle();
+    $('result').hidden = true;
+    var s = data.summary || {};
+    var h = '✅ <b>Записал сон за ' + esc(data.date) + '</b> — отрезков: ' + data.added + '.<br><br>';
+    if(s.night) h += 'Ночью: <b>' + esc(s.night) + ' ч</b><br>';
+    if(s.day) h += 'Днём: <b>' + esc(s.day) + ' ч</b><br>';
+    if(s.total) h += 'Всего: <b>' + esc(s.total) + ' ч</b><br>';
+    if(s.wakeups && String(s.wakeups).trim() !== '0') h += 'Просыпался: ' + esc(s.wakeups) + ' раз<br>';
+    if(s.efficiency) h += 'Качество сна: ' + esc(s.efficiency) + (s.mark ? ' — ' + esc(s.mark) : '') + '<br>';
+    h += '<br><a href="' + SHEET_URL + '" target="_blank" rel="noopener" style="color:var(--accent);font-weight:700">📊 Открыть таблицу</a>';
+    $('done').innerHTML = h;
+    $('done').hidden = false;
+    st.sleep = null;
+  }).catch(showErr);
+}
+
+// ─── старт ───
+if(getCode()){
+  $('app').hidden = false;
+} else {
+  showPin();
+}
+</script>
+</body>
+</html>
