@@ -440,7 +440,7 @@ function showErr(e){
 }
 
 // ─── голос ───
-var recorder = null, chunks = [];
+var recorder = null, recordingStream = null, chunks = [];
 $('btn-rec').onclick = function(){
   if(recorder && recorder.state === 'recording'){ stopRec(); return; }
   if(!navigator.mediaDevices || !window.MediaRecorder){
@@ -448,6 +448,7 @@ $('btn-rec').onclick = function(){
     return;
   }
   navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    recordingStream = stream;
     chunks = [];
     var mime = '';
     ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].some(function(m){
@@ -458,6 +459,7 @@ $('btn-rec').onclick = function(){
     recorder.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
     recorder.onstop = function(){
       stream.getTracks().forEach(function(t){ t.stop(); });
+      recordingStream = null;
       var blob = new Blob(chunks, {type: recorder.mimeType || 'audio/webm'});
       if(blob.size < 1000){ showError('Запись вышла пустой. Попробуй ещё раз.'); recFace(false); return; }
       sendAudio(blob);
@@ -471,7 +473,11 @@ $('btn-rec').onclick = function(){
 
 function stopRec(silent){
   if(recorder && recorder.state === 'recording'){
-    if(silent){ recorder.onstop = null; recorder.stream && recorder.stream.getTracks().forEach(function(t){t.stop();}); }
+    if(silent){
+      recorder.onstop = null;
+      if(recordingStream){ recordingStream.getTracks().forEach(function(t){t.stop();}); }
+      recordingStream = null;
+    }
     try{ recorder.stop(); }catch(e){}
   }
   recFace(false);
